@@ -12,7 +12,7 @@
           {{ column.name }}
         </div>
         <div class="list-reset">
-          <div class="task" v-for="(task, $taskIndex) of column.tasks" :key="$taskIndex">
+          <div class="task" v-for="(task, $taskIndex) of column.tasks" @click="goToTask(task)" :key="$taskIndex">
             <span 
               class="w-full flex-no-shrink font-bold"
             >
@@ -25,20 +25,50 @@
             </span
             >
           </div>
+
+          <input type="text" class="block p-2 w-full bg-transparent border-0" placeholder="+ Enter new task" @keyup.enter="createTask($event, column.tasks)">
         </div>
       </div>
+    </div>
+
+    <div class="task-bg" v-if="isTaskOpen" @click.self="close">
+      <router-view />
     </div>
   </div>
 </template>
 
 <script setup>
 // import { mapState } from 'vuex'
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import { useStore } from "vuex";
+import { useRoute, useRouter } from "vue-router";
 
 const store = useStore();
+const route = useRoute();
+const router = useRouter();
+
+
 
 const board = computed(() => store.state.board);
+const isTaskOpen = computed(() => route.name === 'task')
+
+const goToTask = (task) => {
+  router.push({name: 'task', params: {id: task.id}})
+}
+
+const close = () => {
+  router.push({name: 'board'})
+}
+
+const createTask = (e, tasks) => {
+  store.commit('CREATE_TASK', {
+    tasks,
+    name: e.target.value,
+  })
+
+  e.target.value = ""
+}
+
 </script>
 
 <style lang="css">
@@ -56,7 +86,7 @@ const board = computed(() => store.state.board);
 }
 
 .task-bg {
-  @apply absolute;
+  @apply  fixed top-0 left-0 w-[100vw] h-[100vh];
   background: rgba(0, 0, 0, 0.5);
 }
 </style>
