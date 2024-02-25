@@ -7,10 +7,11 @@
         class="column"
         v-for="(column, $columnIndex) of board.columns"
         :key="$columnIndex"
-        @drop="moveTask($event, column.tasks)"
+        @dragstart.self="pickupColumn($event, $columnIndex)"
         @dragover.prevent
         @dragenter.prevent
-      >
+        @drop="moveTaskOrColumn($event, column.tasks, $columnIndex)"
+        >
         <div class="flex mb-2 items-center font-bold">
           {{ column.name }}
         </div>
@@ -22,6 +23,9 @@
             draggable="true"
             @dragstart="pickupTask($event, $taskIndex, $columnIndex)"
             @click="goToTask(task)"
+            @dragover.prevent
+            @dragenter.prevent
+            @drop.stop="moveTaskOrColumn($event, column.tasks, $columnIndex, $taskIndex)"
           >
             <span class="w-full flex-no-shrink font-bold">
               {{ task.name }}</span
@@ -84,19 +88,48 @@ const pickupTask = (e, taskIndex, fromColumnIndex) => {
   e.dataTransfer.effectAllowed = 'move'
   e.dataTransfer.dropEffect = 'move'
 
-  e.dataTransfer.setData('task-index', taskIndex)
+  e.dataTransfer.setData('from-task-index', taskIndex)
   e.dataTransfer.setData('from-column-index', fromColumnIndex)
+  e.dataTransfer.setData('type', 'task')
 }
 
-const moveTask = (e, toTasks) => {
+const pickupColumn = (e, fromColumnIndex) => {
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.dropEffect = 'move'
+  
+  e.dataTransfer.setData('from-column-index', fromColumnIndex)
+  e.dataTransfer.setData('type', 'column')
+}
+
+const moveTaskOrColumn = (e, toTasks, toColumnIndex, toTaskIndex) => {
+  const type = e.dataTransfer.getData('type')
+  if(type === 'task') {
+    moveTask(e, toTasks, toTaskIndex !== undefined ? toTaskIndex : toTasks.length)
+  } else {
+    moveColumn(e, toColumnIndex)
+  }
+}
+
+const moveTask = (e, toTasks, toTaskIndex) => {
   const fromColumnIndex = e.dataTransfer.getData('from-column-index')
   const fromTasks = board.value.columns[fromColumnIndex].tasks
-  const taskIndex = e.dataTransfer.getData('task-index')
-
+  const fromTaskIndex = e.dataTransfer.getData('from-task-index')
+  
   store.commit('MOVE_TASK', {
     fromTasks,
+    fromTaskIndex,
     toTasks,
-    taskIndex,
+    toTaskIndex
+  })
+}
+
+const moveColumn = (e, toColumnIndex) => {
+  const fromColumnIndex = e.dataTransfer.getData('from-column-index')
+  
+  console.log(fromColumnIndex + ' to ' + toColumnIndex)
+  store.commit('MOVE_COLUMN', {
+    fromColumnIndex,
+    toColumnIndex
   })
 }
 </script>
