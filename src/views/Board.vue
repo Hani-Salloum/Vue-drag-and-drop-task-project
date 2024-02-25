@@ -3,30 +3,43 @@
     <h2 class="pb-4 italic font-bold">{{ board.name }}</h2>
     <!-- <div class="p-4 bg-white text-red text-center">Karen</div> -->
     <div class="flex flex-row items-start">
-      <div 
+      <div
         class="column"
-        v-for="(column, $columnIndex) of board.columns" 
+        v-for="(column, $columnIndex) of board.columns"
         :key="$columnIndex"
+        @drop="moveTask($event, column.tasks)"
+        @dragover.prevent
+        @dragenter.prevent
       >
         <div class="flex mb-2 items-center font-bold">
           {{ column.name }}
         </div>
         <div class="list-reset">
-          <div class="task" v-for="(task, $taskIndex) of column.tasks" @click="goToTask(task)" :key="$taskIndex">
-            <span 
-              class="w-full flex-no-shrink font-bold"
+          <div
+            class="task"
+            v-for="(task, $taskIndex) of column.tasks"
+            :key="$taskIndex" 
+            draggable="true"
+            @dragstart="pickupTask($event, $taskIndex, $columnIndex)"
+            @click="goToTask(task)"
+          >
+            <span class="w-full flex-no-shrink font-bold">
+              {{ task.name }}</span
             >
-              {{ task.name }}</span>
             <span
               v-if="task.description"
               class="w-full flex-no-shrink mt-1 text-sm"
             >
               {{ task.description }}
-            </span
-            >
+            </span>
           </div>
 
-          <input type="text" class="block p-2 w-full bg-transparent border-0" placeholder="+ Enter new task" @keyup.enter="createTask($event, column.tasks)">
+          <input
+            type="text"
+            class="block p-2 w-full bg-transparent border-0"
+            placeholder="+ Enter new task"
+            @keyup.enter="createTask($event, column.tasks)"
+          />
         </div>
       </div>
     </div>
@@ -47,28 +60,45 @@ const store = useStore();
 const route = useRoute();
 const router = useRouter();
 
-
-
 const board = computed(() => store.state.board);
-const isTaskOpen = computed(() => route.name === 'task')
+const isTaskOpen = computed(() => route.name === "task");
 
 const goToTask = (task) => {
-  router.push({name: 'task', params: {id: task.id}})
-}
+  router.push({ name: "task", params: { id: task.id } });
+};
 
 const close = () => {
-  router.push({name: 'board'})
-}
+  router.push({ name: "board" });
+};
 
 const createTask = (e, tasks) => {
-  store.commit('CREATE_TASK', {
+  store.commit("CREATE_TASK", {
     tasks,
     name: e.target.value,
-  })
+  });
 
-  e.target.value = ""
+  e.target.value = "";
+};
+
+const pickupTask = (e, taskIndex, fromColumnIndex) => {
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.dropEffect = 'move'
+
+  e.dataTransfer.setData('task-index', taskIndex)
+  e.dataTransfer.setData('from-column-index', fromColumnIndex)
 }
 
+const moveTask = (e, toTasks) => {
+  const fromColumnIndex = e.dataTransfer.getData('from-column-index')
+  const fromTasks = board.value.columns[fromColumnIndex].tasks
+  const taskIndex = e.dataTransfer.getData('task-index')
+
+  store.commit('MOVE_TASK', {
+    fromTasks,
+    toTasks,
+    taskIndex,
+  })
+}
 </script>
 
 <style lang="css">
@@ -86,7 +116,7 @@ const createTask = (e, tasks) => {
 }
 
 .task-bg {
-  @apply  fixed top-0 left-0 w-[100vw] h-[100vh];
+  @apply fixed top-0 left-0 w-[100vw] h-[100vh];
   background: rgba(0, 0, 0, 0.5);
 }
 </style>
