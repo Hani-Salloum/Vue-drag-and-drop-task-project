@@ -1,57 +1,42 @@
 <template>
-  <div
-    class="column"
-    @dragstart.self="pickupColumn($event, columnIndex)"
-    @dragover.prevent
-    @dragenter.prevent
-    @drop="moveTaskOrColumn($event, column.tasks, columnIndex)"
-  >
-    <div class="flex mb-2 items-center font-bold">
-      {{ column.name }}
-    </div>
-    <div class="list-reset">
-      <BoardTask 
-        v-for="(task, $taskIndex) of column.tasks"
-        :key="$taskIndex"
-        :task="task"
-        :taskIndex="$taskIndex"
-        :board="board"
-        :columnIndex="columnIndex"
-        :column="column"
-      />
-      <!-- <div
-        class="task"
-        draggable="true"
-        @dragstart="pickupTask($event, $taskIndex, columnIndex)"
-        @click="goToTask(task)"
-        @dragover.prevent
-        @dragenter.prevent
-        @drop.stop="
-          moveTaskOrColumn($event, column.tasks, columnIndex, $taskIndex)
-        "
-      >
-        <span class="w-full flex-no-shrink font-bold"> {{ task.name }}</span>
-        <span
-          v-if="task.description"
-          class="w-full flex-no-shrink mt-1 text-sm"
-        >
-          {{ task.description }}
-        </span>
-      </div> -->
+  <AppDrop @drop="moveTaskOrColumn">
+    <AppDrag
+      class="column"
+      :transfer-data="{
+        type: 'column',
+        fromColumnIndex: columnIndex,
+      }"
+    >
+        <div class="flex mb-2 items-center font-bold">
+          {{ column.name }}
+        </div>
+        <div class="list-reset">
+          <BoardTask
+            v-for="(task, $taskIndex) of column.tasks"
+            :key="$taskIndex"
+            :task="task"
+            :taskIndex="$taskIndex"
+            :board="board"
+            :columnIndex="columnIndex"
+            :column="column"
+          />
 
-      <input
-        type="text"
-        class="block p-2 w-full bg-transparent border-0"
-        placeholder="+ Enter new task"
-        @keyup.enter="createTask($event, column.tasks)"
-      />
-    </div>
-  </div>
+          <input
+            type="text"
+            class="block p-2 w-full bg-transparent border-0"
+            placeholder="+ Enter new task"
+            @keyup.enter="createTask($event, column.tasks)"
+          />
+        </div>
+    </AppDrag>
+  </AppDrop>
 </template>
 
 <script setup>
 import { useStore } from "vuex";
-import BoardTask from "./BoardTask.vue"
+import BoardTask from "./BoardTask.vue";
+import AppDrag from "./AppDrag.vue";
+import AppDrop from "./AppDrop.vue";
 
 const store = useStore();
 
@@ -66,10 +51,9 @@ const props = defineProps({
   },
   board: {
     type: Object,
-    required: true
-  }
-})
-
+    required: true,
+  },
+});
 
 const createTask = (e, tasks) => {
   store.commit("CREATE_TASK", {
@@ -80,47 +64,30 @@ const createTask = (e, tasks) => {
   e.target.value = "";
 };
 
-const pickupColumn = (e, fromColumnIndex) => {
-  e.dataTransfer.effectAllowed = "move";
-  e.dataTransfer.dropEffect = "move";
-
-  e.dataTransfer.setData("from-column-index", fromColumnIndex);
-  e.dataTransfer.setData("type", "column");
-};
-
-const moveTaskOrColumn = (e, toTasks, toColumnIndex, toTaskIndex) => {
-  const type = e.dataTransfer.getData("type");
-  if (type === "task") {
-    moveTask(
-      e,
-      toTasks,
-      toTaskIndex !== undefined ? toTaskIndex : toTasks.length
-    );
+const moveTaskOrColumn = (transferData) => {
+  console.log('col : ' + transferData.type)
+  if (transferData.type === "task") {
+    moveTask(transferData);
   } else {
-    moveColumn(e, toColumnIndex);
+    moveColumn(transferData);
   }
 };
 
-const moveTask = (e, toTasks, toTaskIndex) => {
-  const fromColumnIndex = e.dataTransfer.getData("from-column-index");
+const moveTask = ({fromTaskIndex, fromColumnIndex}) => {
   const fromTasks = props.board.columns[fromColumnIndex].tasks;
-  const fromTaskIndex = e.dataTransfer.getData("from-task-index");
 
   store.commit("MOVE_TASK", {
     fromTasks,
     fromTaskIndex,
-    toTasks,
-    toTaskIndex,
+    toTasks: props.column.tasks,
+    toTaskIndex: props.taskIndex,
   });
 };
 
-const moveColumn = (e, toColumnIndex) => {
-  const fromColumnIndex = e.dataTransfer.getData("from-column-index");
-
-  console.log(fromColumnIndex + " to " + toColumnIndex);
+const moveColumn = ({fromColumnIndex}) => {
   store.commit("MOVE_COLUMN", {
     fromColumnIndex,
-    toColumnIndex,
+    toColumnIndex: props.columnIndex,
   });
 };
 </script>
@@ -130,5 +97,4 @@ const moveColumn = (e, toColumnIndex) => {
   @apply bg-grey-light p-2 mr-4 text-left shadow rounded;
   min-width: 350px;
 }
-
 </style>

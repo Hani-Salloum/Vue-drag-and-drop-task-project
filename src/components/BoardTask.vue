@@ -1,23 +1,30 @@
 <template>
-  <div
-    class="task"
-    draggable="true"
-    @dragstart="pickupTask($event, taskIndex, columnIndex)"
-    @click="goToTask(task)"
-    @dragover.prevent
-    @dragenter.prevent
-    @drop.stop="moveTaskOrColumn($event, column.tasks, columnIndex, taskIndex)"
-  >
-    <span class="w-full flex-no-shrink font-bold"> {{ task.name }}</span>
-    <span v-if="task.description" class="w-full flex-no-shrink mt-1 text-sm">
-      {{ task.description }}
-    </span>
-  </div>
+  <AppDrop @drop="moveTaskOrColumn">
+    <AppDrag
+      class="task"
+      :transferData="{
+        type: 'task',
+        fromTaskIndex: taskIndex,
+        fromColumnIndex: columnIndex
+      }"
+      @click="goToTask(task)"
+    >
+        <span class="w-full flex-no-shrink font-bold"> {{ task.name }}</span>
+        <span
+          v-if="task.description"
+          class="w-full flex-no-shrink mt-1 text-sm"
+        >
+          {{ task.description }}
+        </span>
+    </AppDrag>
+  </AppDrop>
 </template>
 
 <script setup>
 import { useStore } from "vuex";
 import { useRouter } from "vue-router";
+import AppDrag from "./AppDrag.vue";
+import AppDrop from "./AppDrop.vue";
 
 const store = useStore();
 const router = useRouter();
@@ -42,56 +49,37 @@ const props = defineProps({
   column: {
     type: Object,
     required: true,
-  }
-})
-
+  },
+});
 
 const goToTask = (task) => {
   router.push({ name: "task", params: { id: task.id } });
 };
 
-const pickupTask = (e, taskIndex, fromColumnIndex) => {
-  e.dataTransfer.effectAllowed = "move";
-  e.dataTransfer.dropEffect = "move";
-
-  e.dataTransfer.setData("from-task-index", taskIndex);
-  e.dataTransfer.setData("from-column-index", fromColumnIndex);
-  e.dataTransfer.setData("type", "task");
-};
-
-const moveTaskOrColumn = (e, toTasks, toColumnIndex, toTaskIndex) => {
-  const type = e.dataTransfer.getData("type");
-  if (type === "task") {
-    moveTask(
-      e,
-      toTasks,
-      toTaskIndex !== undefined ? toTaskIndex : toTasks.length
-    );
+const moveTaskOrColumn = (transferData) => {
+  // const type = e.dataTransfer.getData("type");
+  if (transferData.type === "task") {
+    moveTask(transferData);
   } else {
-    moveColumn(e, toColumnIndex);
+    moveColumn(transferData);
   }
 };
 
-const moveTask = (e, toTasks, toTaskIndex) => {
-  const fromColumnIndex = e.dataTransfer.getData("from-column-index");
+const moveTask = ({fromTaskIndex, fromColumnIndex}) => {
   const fromTasks = props.board.columns[fromColumnIndex].tasks;
-  const fromTaskIndex = e.dataTransfer.getData("from-task-index");
 
   store.commit("MOVE_TASK", {
     fromTasks,
     fromTaskIndex,
-    toTasks,
-    toTaskIndex,
+    toTasks: props.column.tasks,
+    toTaskIndex: props.taskIndex,
   });
 };
 
-const moveColumn = (e, toColumnIndex) => {
-  const fromColumnIndex = e.dataTransfer.getData("from-column-index");
-
-  console.log(fromColumnIndex + " to " + toColumnIndex);
+const moveColumn = ({ fromColumnIndex }) => {
   store.commit("MOVE_COLUMN", {
     fromColumnIndex,
-    toColumnIndex,
+    toColumnIndex: props.columnIndex,
   });
 };
 </script>

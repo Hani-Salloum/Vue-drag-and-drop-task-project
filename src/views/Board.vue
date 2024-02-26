@@ -1,6 +1,6 @@
 <template>
   <div class="board">
-    <h2 class="pb-4 italic font-bold">{{ board.name }}</h2>
+    <h2 class="pb-7 text-xl italic font-bold text-white">{{ board.name }}</h2>
     <!-- <div class="p-4 bg-white text-red text-center">Karen</div> -->
     <div class="flex flex-row items-start">
       <BoardColumn 
